@@ -68,6 +68,7 @@ var Mouse = require('../core/Mouse');
                 showPositions: false,
                 showAngleIndicator: false,
                 showIds: false,
+                showLabel: false,
                 showShadows: false,
                 showVertexNumbers: false,
                 showConvexHulls: false,
@@ -385,6 +386,9 @@ var Mouse = require('../core/Mouse');
         if (options.showIds)
             Render.bodyIds(render, bodies, context);
 
+        if (options.showLabel)
+            Render.bodyLabel(render, bodies, context);
+        
         if (options.showSeparations)
             Render.separations(render, engine.pairs.list, context);
 
@@ -647,6 +651,34 @@ var Mouse = require('../core/Mouse');
                     var sprite = part.render.sprite,
                         texture = _getTexture(render, sprite.texture);
 
+                    // try clipping the sprite through the vertices.. code duplicated from below
+                    c.save();
+
+                    if (part.circleRadius) {
+                        c.beginPath();
+                        c.arc(part.position.x, part.position.y, part.circleRadius, 0, 2 * Math.PI);
+                    } else {
+                        c.beginPath();
+                        c.moveTo(part.vertices[0].x, part.vertices[0].y);
+
+                        for (var j = 1; j < part.vertices.length; j++) {
+                            if (!part.vertices[j - 1].isInternal || showInternalEdges) {
+                                c.lineTo(part.vertices[j].x, part.vertices[j].y);
+                            } else {
+                                c.moveTo(part.vertices[j].x, part.vertices[j].y);
+                            }
+
+                            if (part.vertices[j].isInternal && !showInternalEdges) {
+                                c.moveTo(part.vertices[(j + 1) % part.vertices.length].x, part.vertices[(j + 1) % part.vertices.length].y);
+                            }
+                        }
+
+                        c.lineTo(part.vertices[0].x, part.vertices[0].y);
+                        c.closePath();
+                    }
+                    c.clip();
+                    
+                    
                     c.translate(part.position.x, part.position.y);
                     c.rotate(part.angle);
 
@@ -661,6 +693,7 @@ var Mouse = require('../core/Mouse');
                     // revert translation, hopefully faster than save / restore
                     c.rotate(-part.angle);
                     c.translate(-part.position.x, -part.position.y);
+                    c.restore();
                 } else {
                     // part polygon
                     if (part.circleRadius) {
@@ -1050,6 +1083,45 @@ var Mouse = require('../core/Mouse');
         }
     };
 
+    /**
+     * Draws body label
+     * @private
+     * @method bodyLabel
+     * @param {render} render
+     * @param {body[]} bodies
+     * @param {RenderingContext} context
+     */
+    Render.bodyLabel = function(render, bodies, context) {
+        var c = context,
+            i,
+            j;
+
+        for (i = 0; i < bodies.length; i++) {
+            if (!bodies[i].render.visible || bodies[i].isStatic)
+                continue;
+            
+            var parts = bodies[i].parts;
+            for (j = parts.length > 1 ? 1 : 0; j < parts.length; j++) {
+                var part = parts[j];
+                c.translate(part.position.x, part.position.y);
+                c.rotate(part.angle);
+                c.font = "14px Arial";
+                c.textAlign = "center";
+                c.fillStyle = 'rgba(0,0,0,0.5)';
+                var partLabel = '' + part.label;
+                var labelParts = partLabel.split(",");
+                var labelText = labelParts[0];
+                var x = labelParts[1];
+                var y = labelParts[2];
+                c.fillText(labelText, x, y); 
+                c.rotate(-part.angle);
+                c.translate(-part.position.x, -part.position.y);
+            }
+            
+        }
+    };
+
+    
     /**
      * Description
      * @private
