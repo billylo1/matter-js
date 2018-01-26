@@ -647,6 +647,7 @@ var Mouse = require('../core/Mouse');
                 }
 
                 if (part.render.sprite && part.render.sprite.texture && !options.wireframes) {
+                    
                     // part sprite
                     var sprite = part.render.sprite,
                         texture = _getTexture(render, sprite.texture);
@@ -682,6 +683,13 @@ var Mouse = require('../core/Mouse');
                     c.translate(part.position.x, part.position.y);
                     c.rotate(part.angle);
 
+                    //BL
+                    
+                    if (!options.wireframes) {
+                        c.fillStyle = part.render.fillStyle;
+                        c.fill();
+                    }
+                    
                     c.drawImage(
                         texture,
                         texture.width * -sprite.xOffset * sprite.xScale,
@@ -1103,19 +1111,37 @@ var Mouse = require('../core/Mouse');
             var parts = bodies[i].parts;
             for (j = parts.length > 1 ? 1 : 0; j < parts.length; j++) {
                 var part = parts[j];
+                var height = part.bounds.max.y - part.bounds.min.y;
                 c.translate(part.position.x, part.position.y);
                 c.rotate(part.angle);
-                c.font = "14px Arial";
+                var fontSize;
+                
+                if (height > 100) {
+                    c.font = "14px Arial";
+                    fontSize = 14;
+                } else if (height > 50) {
+                    c.font = "10px Arial";
+                    fontSize = 10;
+                } else {
+                    c.font = "6px Arial";
+                    fontSize = 6;
+                }
                 c.textAlign = "center";
                 c.fillStyle = 'rgba(0,0,0,0.5)';
                 var partLabel = '' + part.label;
                 var labelParts = partLabel.split(",");
-                var labelText = labelParts[0];
-                var x = labelParts[1];
-                var y = labelParts[2];
-                c.fillText(labelText, x, y); 
+                var labelText = labelParts[1]; //amount
+                var x = labelParts[2];
+                var y = labelParts[3];
+                if (labelParts.length > 5) {
+                    var indicator = labelParts[5];
+                    labelText += ' ' + indicator;
+                }
+                c.fillText(labelParts[0], x, -y+fontSize*1.5);
+                c.fillText(labelText, x, y);
                 c.rotate(-part.angle);
                 c.translate(-part.position.x, -part.position.y);
+                
             }
             
         }
@@ -1454,7 +1480,7 @@ var Mouse = require('../core/Mouse');
             cssBackground = 'url(' + background + ')';
 
         render.canvas.style.background = cssBackground;
-        render.canvas.style.backgroundSize = "contain";
+        render.canvas.style.backgroundSize = "100% 100%";
         render.currentBackground = background;
     };
 
